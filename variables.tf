@@ -64,10 +64,10 @@ variable "private_subnets" {
   default     = []
 }
 
-variable "azs" {
-  description = "A list of availability zones names or ids in the region"
-  type        = list(string)
-  default     = []
+variable "region" {
+  description = "AWS Region to use AZs from"
+  type        = string
+  default     = "eu-west-1"
 }
 
 variable "enable_dns_hostnames" {

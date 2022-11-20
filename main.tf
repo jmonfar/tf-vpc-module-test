@@ -3,6 +3,10 @@ locals {
     length(var.private_subnets),
   )
 
+  az_suffix = ["a", "b", "c"]
+
+  azs = tolist([for az in local.az_suffix : "${var.region}${az}"])
+
   # Use `local.vpc_id` to give a hint to Terraform that subnets should be deleted before secondary CIDR blocks can be free!
   vpc_id = try(aws_vpc_ipv4_cidr_block_association.this[0].vpc_id, aws_vpc.this[0].id, "")
 
@@ -98,7 +102,7 @@ resource "aws_route_table" "private" {
     {
       "Name" = format(
         "${var.name}-${var.private_subnet_suffix}-%s",
-        element(var.azs, count.index),
+        element(local.azs, count.index),
       )
     },
     var.tags,
@@ -115,15 +119,15 @@ resource "aws_subnet" "public" {
 
   vpc_id                          = local.vpc_id
   cidr_block                      = element(concat(var.public_subnets, [""]), count.index)
-  availability_zone               = length(regexall("^[a-z]{2}-", element(var.azs, count.index))) > 0 ? element(var.azs, count.index) : null
-  availability_zone_id            = length(regexall("^[a-z]{2}-", element(var.azs, count.index))) == 0 ? element(var.azs, count.index) : null
+  availability_zone               = length(regexall("^[a-z]{2}-", element(local.azs, count.index))) > 0 ? element(local.azs, count.index) : null
+  availability_zone_id            = length(regexall("^[a-z]{2}-", element(local.azs, count.index))) == 0 ? element(local.azs, count.index) : null
   map_public_ip_on_launch         = var.map_public_ip_on_launch
 
   tags = merge(
     {
       Name = try(
         var.public_subnet_names[count.index],
-        format("${var.name}-${var.public_subnet_suffix}-%s", element(var.azs, count.index))
+        format("${var.name}-${var.public_subnet_suffix}-%s", element(local.azs, count.index))
       )
     },
     var.tags,
@@ -140,14 +144,14 @@ resource "aws_subnet" "private" {
 
   vpc_id                          = local.vpc_id
   cidr_block                      = var.private_subnets[count.index]
-  availability_zone               = length(regexall("^[a-z]{2}-", element(var.azs, count.index))) > 0 ? element(var.azs, count.index) : null
-  availability_zone_id            = length(regexall("^[a-z]{2}-", element(var.azs, count.index))) == 0 ? element(var.azs, count.index) : null
+  availability_zone               = length(regexall("^[a-z]{2}-", element(local.azs, count.index))) > 0 ? element(local.azs, count.index) : null
+  availability_zone_id            = length(regexall("^[a-z]{2}-", element(local.azs, count.index))) == 0 ? element(local.azs, count.index) : null
 
   tags = merge(
     {
       Name = try(
         var.private_subnet_names[count.index],
-        format("${var.name}-${var.private_subnet_suffix}-%s", element(var.azs, count.index))
+        format("${var.name}-${var.private_subnet_suffix}-%s", element(local.azs, count.index))
       )
     },
     var.tags,
@@ -270,7 +274,7 @@ resource "aws_eip" "nat" {
     {
       "Name" = format(
         "${var.name}-%s",
-        element(var.azs, count.index),
+        element(local.azs, count.index),
       )
     },
     var.tags,
@@ -294,7 +298,7 @@ resource "aws_nat_gateway" "this" {
     {
       "Name" = format(
         "${var.name}-%s",
-        element(var.azs, count.index),
+        element(local.azs, count.index),
       )
     },
     var.tags,

@@ -5,12 +5,12 @@ Terraform module which creates VPC resources on AWS.
 
 ```hcl
 module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
+  source = "git::git@github.com:jmonfar/tf-vpc-module-test.git"
 
   name = "my-vpc"
   cidr = "10.0.0.0/16"
 
-  azs             = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
+  region = "eu-west-1"
   private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
   public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
@@ -21,6 +21,21 @@ module "vpc" {
 }
 ```
 
+## Module behaviour
+
+Given a AWS region, a VPC name, a cidr, and two lists of public and private subnet cidr, the module deploys a VPC with the name, associated with the cidr, and deploys the subnets in separate region's AZ, a pair of public/private subnets on each.
+
+The public subnet is routed to the VPC created igw, while each private subnet is routed through a NAT gateway located in the corresponding public subnet. The destination cidr block from the NAT gateways is customizable from the default 0.0.0.0/0.
+
+## AWS Region, Availability Zones and Subnets
+
+The module gets the AWS region to use as argument, and builds the required list of AZ to use in the region from the number of subnets to create.
+
+For example, if "eu-west-1" is specified as region with two public/private subnets, it will deploy them in "eu-west-1a" and "eu-west-1b".
+
+If three subnets are specified, it will use "eu-west-1a", "eu-west-1b" and "eu-west-1c".
+
+There is no enforcement to assure that the same number of public and private subnets are deployed, even if they are expected to be the same number, so a NAT gateway is deployed in each public subnet AZ for each private subnet in the AZ.
 ## Network Access Control Lists (ACL or NACL)
 
 Each type of subnet has its own network ACL with custom rules per subnet. This is, dedicated network ACL for the public subnets and dedicated network ACL for the private subnets.
@@ -69,8 +84,6 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_amazon_side_asn"></a> [amazon\_side\_asn](#input\_amazon\_side\_asn) | The Autonomous System Number (ASN) for the Amazon side of the gateway. By default the virtual private gateway is created with the current default Amazon ASN. | `string` | `"64512"` | no |
-| <a name="input_azs"></a> [azs](#input\_azs) | A list of availability zones names or ids in the region | `list(string)` | `[]` | no |
 | <a name="input_cidr"></a> [cidr](#input\_cidr) | (Optional) The IPv4 CIDR block for the VPC. CIDR can be explicitly set or it can be derived from IPAM using `ipv4_netmask_length` & `ipv4_ipam_pool_id` | `string` | `"0.0.0.0/0"` | no |
 | <a name="input_create_vpc"></a> [create\_vpc](#input\_create\_vpc) | Controls if VPC should be created (it affects almost all resources) | `bool` | `true` | no |
 | <a name="input_enable_dns_hostnames"></a> [enable\_dns\_hostnames](#input\_enable\_dns\_hostnames) | Should be true to enable DNS hostnames in the VPC | `bool` | `false` | no |
@@ -98,6 +111,7 @@ No modules.
 | <a name="input_public_subnet_suffix"></a> [public\_subnet\_suffix](#input\_public\_subnet\_suffix) | Suffix to append to public subnets name | `string` | `"public"` | no |
 | <a name="input_public_subnet_tags"></a> [public\_subnet\_tags](#input\_public\_subnet\_tags) | Additional tags for the public subnets | `map(string)` | `{}` | no |
 | <a name="input_public_subnets"></a> [public\_subnets](#input\_public\_subnets) | A list of public subnets inside the VPC | `list(string)` | `[]` | no |
+| <a name="input_region"></a> [region](#input\_region) | AWS Region for the Availability Zones to use | `string` | `"eu-west-1"` | no |
 | <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | List of secondary CIDR blocks to associate with the VPC to extend the IP Address pool | `list(string)` | `[]` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | A map of tags to add to all resources | `map(string)` | `{}` | no |
 | <a name="input_vpc_tags"></a> [vpc\_tags](#input\_vpc\_tags) | Additional tags for the VPC | `map(string)` | `{}` | no |
@@ -106,7 +120,7 @@ No modules.
 
 | Name | Description |
 |------|-------------|
-| <a name="output_azs"></a> [azs](#output\_azs) | A list of availability zones specified as argument to this module |
+| <a name="output_azs"></a> [azs](#output\_azs) | AZs used in the region, built from the region argument |
 | <a name="output_igw_arn"></a> [igw\_arn](#output\_igw\_arn) | The ARN of the Internet Gateway |
 | <a name="output_igw_id"></a> [igw\_id](#output\_igw\_id) | The ID of the Internet Gateway |
 | <a name="output_name"></a> [name](#output\_name) | The name of the VPC specified as argument to this module |
@@ -129,6 +143,7 @@ No modules.
 | <a name="output_public_subnet_arns"></a> [public\_subnet\_arns](#output\_public\_subnet\_arns) | List of ARNs of public subnets |
 | <a name="output_public_subnets"></a> [public\_subnets](#output\_public\_subnets) | List of IDs of public subnets |
 | <a name="output_public_subnets_cidr_blocks"></a> [public\_subnets\_cidr\_blocks](#output\_public\_subnets\_cidr\_blocks) | List of cidr\_blocks of public subnets |
+| <a name="output_region"></a> [region](#output\_region) | The region in which the VPC has been deployed, as argument to this module |
 | <a name="output_vpc_arn"></a> [vpc\_arn](#output\_vpc\_arn) | The ARN of the VPC |
 | <a name="output_vpc_cidr_block"></a> [vpc\_cidr\_block](#output\_vpc\_cidr\_block) | The CIDR block of the VPC |
 | <a name="output_vpc_enable_dns_hostnames"></a> [vpc\_enable\_dns\_hostnames](#output\_vpc\_enable\_dns\_hostnames) | Whether or not the VPC has DNS hostname support |

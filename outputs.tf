@@ -148,3 +148,12 @@ output "name" {
   description = "The name of the VPC specified as argument to this module"
   value       = var.name
 }
+output "region" {
+  description = "The region in which the VPC has been deployed, as argument to this module"
+  value       = var.region
+}
+
+output "azs" {
+  description = "AZs used in the region, built from the region argument"
+  value       = local.azs
+}

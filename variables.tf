@@ -94,12 +94,6 @@ variable "map_public_ip_on_launch" {
   default     = true
 }
 
-variable "amazon_side_asn" {
-  description = "The Autonomous System Number (ASN) for the Amazon side of the gateway. By default the virtual private gateway is created with the current default Amazon ASN."
-  type        = string
-  default     = "64512"
-}
-
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

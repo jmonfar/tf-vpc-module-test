@@ -1,7 +1,9 @@
 locals {
-  nat_gateway_count = max(
-    length(var.private_subnets),
-  )
+  create_vpc = var.create_vpc
+
+  # Added for clarity, length(var.subnets.private) could have been used directly instead
+  # but using the named local makes the code easier to understand
+  nat_gateway_count = length(var.subnets.private)
 
   az_suffix = ["a", "b", "c"]
 
@@ -9,8 +11,6 @@ locals {
 
   # Use `local.vpc_id` to give a hint to Terraform that subnets should be deleted before secondary CIDR blocks can be free!
   vpc_id = try(aws_vpc_ipv4_cidr_block_association.this[0].vpc_id, aws_vpc.this[0].id, "")
-
-  create_vpc = var.create_vpc
 }
 
 ################################################################################
@@ -49,7 +49,7 @@ resource "aws_vpc_ipv4_cidr_block_association" "this" {
 ################################################################################
 
 resource "aws_internet_gateway" "this" {
-  count = local.create_vpc && length(var.public_subnets) > 0 ? 1 : 0
+  count = local.create_vpc && length(var.subnets.public) > 0 ? 1 : 0
 
   vpc_id = local.vpc_id
 
@@ -65,7 +65,7 @@ resource "aws_internet_gateway" "this" {
 ################################################################################
 
 resource "aws_route_table" "public" {
-  count = local.create_vpc && length(var.public_subnets) > 0 ? 1 : 0
+  count = local.create_vpc && length(var.subnets.public) > 0 ? 1 : 0
 
   vpc_id = local.vpc_id
 
@@ -77,7 +77,7 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route" "public_internet_gateway" {
-  count = local.create_vpc && length(var.public_subnets) > 0 ? 1 : 0
+  count = local.create_vpc && length(var.subnets.public) > 0 ? 1 : 0
 
   route_table_id         = aws_route_table.public[0].id
   destination_cidr_block = "0.0.0.0/0"
@@ -111,14 +111,14 @@ resource "aws_route_table" "private" {
 }
 
 ################################################################################
-# Public subnet
+# Public subnets
 ################################################################################
 
 resource "aws_subnet" "public" {
-  count = local.create_vpc && length(var.public_subnets) > 0 ? length(var.public_subnets) : 0
+  count = local.create_vpc && length(var.subnets.public) > 0 ? length(var.subnets.public) : 0
 
   vpc_id                          = local.vpc_id
-  cidr_block                      = element(concat(var.public_subnets, [""]), count.index)
+  cidr_block                      = element(concat(var.subnets.public, [""]), count.index)
   availability_zone               = length(regexall("^[a-z]{2}-", element(local.azs, count.index))) > 0 ? element(local.azs, count.index) : null
   availability_zone_id            = length(regexall("^[a-z]{2}-", element(local.azs, count.index))) == 0 ? element(local.azs, count.index) : null
   map_public_ip_on_launch         = var.map_public_ip_on_launch
@@ -136,14 +136,14 @@ resource "aws_subnet" "public" {
 }
 
 ################################################################################
-# Private subnet
+# Private subnets
 ################################################################################
 
 resource "aws_subnet" "private" {
-  count = local.create_vpc && length(var.private_subnets) > 0 ? length(var.private_subnets) : 0
+  count = local.create_vpc && length(var.subnets.private) > 0 ? length(var.subnets.private) : 0
 
   vpc_id                          = local.vpc_id
-  cidr_block                      = var.private_subnets[count.index]
+  cidr_block                      = var.subnets.private[count.index]
   availability_zone               = length(regexall("^[a-z]{2}-", element(local.azs, count.index))) > 0 ? element(local.azs, count.index) : null
   availability_zone_id            = length(regexall("^[a-z]{2}-", element(local.azs, count.index))) == 0 ? element(local.azs, count.index) : null
 
@@ -160,11 +160,11 @@ resource "aws_subnet" "private" {
 }
 
 ################################################################################
-# Public Network ACLs
+# Public Network ACL
 ################################################################################
 
 resource "aws_network_acl" "public" {
-  count = local.create_vpc && length(var.public_subnets) > 0 ? 1 : 0
+  count = local.create_vpc && length(var.subnets.public) > 0 ? 1 : 0
 
   vpc_id     = local.vpc_id
   subnet_ids = aws_subnet.public[*].id
@@ -177,7 +177,7 @@ resource "aws_network_acl" "public" {
 }
 
 resource "aws_network_acl_rule" "public_inbound" {
-  count = local.create_vpc && length(var.public_subnets) > 0 ? length(var.public_inbound_acl_rules) : 0
+  count = local.create_vpc && length(var.subnets.public) > 0 ? length(var.public_inbound_acl_rules) : 0
 
   network_acl_id = aws_network_acl.public[0].id
 
@@ -193,7 +193,7 @@ resource "aws_network_acl_rule" "public_inbound" {
 }
 
 resource "aws_network_acl_rule" "public_outbound" {
-  count = local.create_vpc && length(var.public_subnets) > 0 ? length(var.public_outbound_acl_rules) : 0
+  count = local.create_vpc && length(var.subnets.public) > 0 ? length(var.public_outbound_acl_rules) : 0
 
   network_acl_id = aws_network_acl.public[0].id
 
@@ -209,11 +209,11 @@ resource "aws_network_acl_rule" "public_outbound" {
 }
 
 ################################################################################
-# Private Network ACLs
+# Private Network ACL
 ################################################################################
 
 resource "aws_network_acl" "private" {
-  count = local.create_vpc && length(var.private_subnets) > 0 ? 1 : 0
+  count = local.create_vpc && length(var.subnets.private) > 0 ? 1 : 0
 
   vpc_id     = local.vpc_id
   subnet_ids = aws_subnet.private[*].id
@@ -226,7 +226,7 @@ resource "aws_network_acl" "private" {
 }
 
 resource "aws_network_acl_rule" "private_inbound" {
-  count = local.create_vpc && length(var.private_subnets) > 0 ? length(var.private_inbound_acl_rules) : 0
+  count = local.create_vpc && length(var.subnets.private) > 0 ? length(var.private_inbound_acl_rules) : 0
 
   network_acl_id = aws_network_acl.private[0].id
 
@@ -242,7 +242,7 @@ resource "aws_network_acl_rule" "private_inbound" {
 }
 
 resource "aws_network_acl_rule" "private_outbound" {
-  count = local.create_vpc && length(var.private_subnets) > 0 ? length(var.private_outbound_acl_rules) : 0
+  count = local.create_vpc && length(var.subnets.private) > 0 ? length(var.private_outbound_acl_rules) : 0
 
   network_acl_id = aws_network_acl.private[0].id
 
@@ -258,7 +258,7 @@ resource "aws_network_acl_rule" "private_outbound" {
 }
 
 ################################################################################
-# NAT Gateway
+# NAT Gateways
 ################################################################################
 
 locals {
@@ -321,11 +321,11 @@ resource "aws_route" "private_nat_gateway" {
 }
 
 ################################################################################
-# Route table association
+# Route table associations
 ################################################################################
 
 resource "aws_route_table_association" "private" {
-  count = local.create_vpc && length(var.private_subnets) > 0 ? length(var.private_subnets) : 0
+  count = local.create_vpc && length(var.subnets.private) > 0 ? length(var.subnets.private) : 0
 
   subnet_id = element(aws_subnet.private[*].id, count.index)
   route_table_id = element(
@@ -335,7 +335,7 @@ resource "aws_route_table_association" "private" {
 }
 
 resource "aws_route_table_association" "public" {
-  count = local.create_vpc && length(var.public_subnets) > 0 ? length(var.public_subnets) : 0
+  count = local.create_vpc && length(var.subnets.public) > 0 ? length(var.subnets.public) : 0
 
   subnet_id      = element(aws_subnet.public[*].id, count.index)
   route_table_id = aws_route_table.public[0].id

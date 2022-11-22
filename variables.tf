@@ -52,16 +52,25 @@ variable "private_subnet_names" {
   default     = []
 }
 
-variable "public_subnets" {
-  description = "A list of public subnets inside the VPC"
-  type        = list(string)
-  default     = []
-}
+variable "subnets" {
+  type = object({
+    private = list(string)
+    public = list(string)
+  })
 
-variable "private_subnets" {
-  description = "A list of private subnets inside the VPC"
-  type        = list(string)
-  default     = []
+  description = "Lists of cidr for private and public subnets inside the VPC"
+  default     = {
+    private = []
+    public = []
+  }
+  validation {
+    condition     = length(var.subnets.private) > 0 && length(var.subnets.private) < 4
+    error_message = "subnets number must be between 1 and 3"
+  }
+  validation {
+    condition     = length(var.subnets.private) == length(var.subnets.public)
+    error_message = "subnets number must be the same for private and public"
+  }
 }
 
 variable "region" {

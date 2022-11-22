@@ -1,6 +1,6 @@
-# AWS VPC Terraform module
+# AWS Simplified VPC Terraform module
 
-Terraform module which creates VPC resources on AWS.
+Terraform module which creates simple VPC resources on AWS.
 ## Usage
 
 ```hcl
@@ -11,8 +11,10 @@ module "vpc" {
   cidr = "10.0.0.0/16"
 
   region = "eu-west-1"
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  subnets = {
+    private = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+    public = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  }
 
   tags = {
     Terraform = "true"
@@ -23,9 +25,11 @@ module "vpc" {
 
 ## Module behaviour
 
-Given a AWS region, a VPC name, a cidr, and two lists of public and private subnet cidr, the module deploys a VPC with the name, associated with the cidr, and deploys the subnets in separate region's AZ, a pair of public/private subnets on each.
+Given a AWS region, a VPC name, a cidr, and two lists of private and public subnet cidr, the module deploys a VPC with the name, associated with the cidr, and deploys the subnets in separate region's AZ, a pair of private/public subnets on each.
 
 The public subnet is routed to the VPC created igw, while each private subnet is routed through a NAT gateway located in the corresponding public subnet. The destination cidr block from the NAT gateways is customizable from the default 0.0.0.0/0.
+
+The list of subnets need to be between 1 and 3, and the same number for private and public subnets. Terraform will enforce those restrictions.
 
 ## AWS Region, Availability Zones and Subnets
 
@@ -35,7 +39,7 @@ For example, if "eu-west-1" is specified as region with two public/private subne
 
 If three subnets are specified, it will use "eu-west-1a", "eu-west-1b" and "eu-west-1c".
 
-There is no enforcement to assure that the same number of public and private subnets are deployed, even if they are expected to be the same number, so a NAT gateway is deployed in each public subnet AZ for each private subnet in the AZ.
+A NAT gateway is deployed in each public subnet AZ for each private subnet in the AZ.
 ## Network Access Control Lists (ACL or NACL)
 
 Each type of subnet has its own network ACL with custom rules per subnet. This is, dedicated network ACL for the public subnets and dedicated network ACL for the private subnets.
@@ -102,7 +106,6 @@ No modules.
 | <a name="input_private_subnet_names"></a> [private\_subnet\_names](#input\_private\_subnet\_names) | Explicit values to use in the Name tag on private subnets. If empty, Name tags are generated. | `list(string)` | `[]` | no |
 | <a name="input_private_subnet_suffix"></a> [private\_subnet\_suffix](#input\_private\_subnet\_suffix) | Suffix to append to private subnets name | `string` | `"private"` | no |
 | <a name="input_private_subnet_tags"></a> [private\_subnet\_tags](#input\_private\_subnet\_tags) | Additional tags for the private subnets | `map(string)` | `{}` | no |
-| <a name="input_private_subnets"></a> [private\_subnets](#input\_private\_subnets) | A list of private subnets inside the VPC | `list(string)` | `[]` | no |
 | <a name="input_public_acl_tags"></a> [public\_acl\_tags](#input\_public\_acl\_tags) | Additional tags for the public subnets network ACL | `map(string)` | `{}` | no |
 | <a name="input_public_inbound_acl_rules"></a> [public\_inbound\_acl\_rules](#input\_public\_inbound\_acl\_rules) | Public subnets inbound network ACLs | `list(map(string))` | <pre>[<br>  {<br>    "cidr_block": "0.0.0.0/0",<br>    "from_port": 0,<br>    "protocol": "-1",<br>    "rule_action": "allow",<br>    "rule_number": 100,<br>    "to_port": 0<br>  }<br>]</pre> | no |
 | <a name="input_public_outbound_acl_rules"></a> [public\_outbound\_acl\_rules](#input\_public\_outbound\_acl\_rules) | Public subnets outbound network ACLs | `list(map(string))` | <pre>[<br>  {<br>    "cidr_block": "0.0.0.0/0",<br>    "from_port": 0,<br>    "protocol": "-1",<br>    "rule_action": "allow",<br>    "rule_number": 100,<br>    "to_port": 0<br>  }<br>]</pre> | no |
@@ -110,9 +113,9 @@ No modules.
 | <a name="input_public_subnet_names"></a> [public\_subnet\_names](#input\_public\_subnet\_names) | Explicit values to use in the Name tag on public subnets. If empty, Name tags are generated. | `list(string)` | `[]` | no |
 | <a name="input_public_subnet_suffix"></a> [public\_subnet\_suffix](#input\_public\_subnet\_suffix) | Suffix to append to public subnets name | `string` | `"public"` | no |
 | <a name="input_public_subnet_tags"></a> [public\_subnet\_tags](#input\_public\_subnet\_tags) | Additional tags for the public subnets | `map(string)` | `{}` | no |
-| <a name="input_public_subnets"></a> [public\_subnets](#input\_public\_subnets) | A list of public subnets inside the VPC | `list(string)` | `[]` | no |
 | <a name="input_region"></a> [region](#input\_region) | AWS Region for the Availability Zones to use | `string` | `"eu-west-1"` | no |
 | <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | List of secondary CIDR blocks to associate with the VPC to extend the IP Address pool | `list(string)` | `[]` | no |
+| <a name="input_subnets"></a> [subnets](#input\_subnets) | Lists of cidr for private and public subnets inside the VPC | <pre>object = ({<br>  private = list(string)<br>  public = list(string)<br>})<br></pre> | <pre>{<br>  private = []<br>  public = []<br>}<br></pre> | Yes |
 | <a name="input_tags"></a> [tags](#input\_tags) | A map of tags to add to all resources | `map(string)` | `{}` | no |
 | <a name="input_vpc_tags"></a> [vpc\_tags](#input\_vpc\_tags) | Additional tags for the VPC | `map(string)` | `{}` | no |
 

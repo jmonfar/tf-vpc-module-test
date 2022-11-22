@@ -23,7 +23,7 @@ It has been quite a task, but I am still convinced that it took less work and wa
 
 So for most practic purposes, my module is so different that it cannot be considered the same, but a derivative work for which we have always to credit the original authors.
 
-## Modifying the [terraform-aws-vpc](https://github.com/terraform-aws-modules/terraform-aws-vpc/tree/master/examples) module
+## Modifying the community [terraform-aws-vpc](https://github.com/terraform-aws-modules/terraform-aws-vpc/tree/master/examples) module
 
 The community module `main.tf` has so many options and features that counts 1251 lines, managing up to 70 different resource types. After adaptation, the module has gone down to 351 lines and 19 resources. Hope its understood that being able to do so implies a quite detailed comprehension of the code and the associated AWS resources. Otherwise it would be impossible to discern what was droppable and how to glue the holes between the remaining fragments.
 
